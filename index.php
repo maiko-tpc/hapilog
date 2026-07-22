@@ -298,12 +298,51 @@ if ($q !== '') {
             OR items.property_number LIKE :q
             OR items.default_location LIKE :q
             OR items.purchase_date LIKE :q
+            OR items.manual_url LIKE :q
             OR items.serial_number LIKE :q
             OR items.note LIKE :q
+
             OR latest.location LIKE :q
             OR latest.user_name LIKE :q
             OR latest.status LIKE :q
             OR latest.memo LIKE :q
+
+            OR EXISTS (
+                SELECT 1
+                FROM movements mh
+                WHERE mh.item_id = items.id
+                  AND (
+                        mh.location LIKE :q
+                        OR mh.user_name LIKE :q
+                        OR mh.status LIKE :q
+                        OR mh.memo LIKE :q
+                        OR mh.moved_at LIKE :q
+                  )
+            )
+
+            OR EXISTS (
+                SELECT 1
+                FROM item_photos ph
+                WHERE ph.item_id = items.id
+                  AND (
+                        ph.original_name LIKE :q
+                        OR ph.stored_name LIKE :q
+                        OR ph.caption LIKE :q
+                        OR ph.uploaded_at LIKE :q
+                  )
+            )
+
+            OR EXISTS (
+                SELECT 1
+                FROM item_manuals ma
+                WHERE ma.item_id = items.id
+                  AND (
+                        ma.original_name LIKE :q
+                        OR ma.stored_name LIKE :q
+                        OR ma.title LIKE :q
+                        OR ma.uploaded_at LIKE :q
+                  )
+            )
         )
     ";
 
@@ -450,7 +489,7 @@ $display_count = count($items);
         <input type="text"
                name="q"
                value="<?php echo h($q); ?>"
-               placeholder="管理番号、型番、名称、メーカー、場所、使用者など">
+               placeholder="管理番号、型番、名称、メーカー、場所、使用者、履歴メモ、写真キャプションなど">
 
         <input type="hidden"
                name="category"
