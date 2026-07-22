@@ -627,7 +627,6 @@ $display_count = count($items);
                     <th>デフォルト置き場</th>
                     <th>現在地</th>
                     <th>使用者</th>
-                    <th>状態</th>
                     <th>最終更新</th>
                 </tr>
 
@@ -662,7 +661,6 @@ $display_count = count($items);
                         <td><?php echo h($item['default_location']); ?></td>
                         <td><?php echo h($item['location']); ?></td>
                         <td><?php echo h($item['user_name']); ?></td>
-                        <td><?php echo h($item['status']); ?></td>
                         <td>
                             <?php echo h(
                                 format_datetime_minute($item['moved_at'])
