@@ -1,27 +1,49 @@
-# Equipment Log
+# HapiLog (Hardware and Apparatus Property Inventory Log)
 
-PHPとSQLiteで動作する、研究室・大学・研究施設向けの軽量な装置管理システムです。
+**HapiLog** は、研究室・大学・研究施設向けの軽量な装置管理システムです。
 
-装置の基本情報、現在地、使用者、状態、移動履歴、写真、PDFマニュアルをブラウザ上で一元管理できます。簡易掲示板を利用して、一時的な物品移動や返却状況も記録できます。
+PHP と SQLite で動作し、専用のデータベースサーバーを必要としません。
+装置情報、所在、使用者、状態、移動履歴、写真、PDFマニュアル、簡易掲示板をブラウザ上で管理できます。
 
 ## 主な機能
 
-* 装置情報の登録・編集・検索
-* 管理番号、カテゴリ、状態、現在地による絞り込み
-* 管理番号順・更新日時順での並べ替え
-* デフォルト置き場と現在地の管理
-* 使用者・状態・移動履歴の記録
+* 装置情報の登録・編集
+* キーワード検索
+* カテゴリ・状態・現在地による絞り込み
+* 管理番号順・更新日時順の並べ替え
+* 現在地・使用者・状態の管理
+* 移動履歴の記録
 * 装置写真の登録
 * 同型装置間での写真の共有
 * PDFマニュアルの登録
-* 同型装置間でのマニュアルの共有
-* CSV形式での装置一覧出力
-* 掲示板への投稿・編集
+* 同型装置間でのPDFマニュアルの共有
+* 装置一覧のCSV出力
+* 一時的な移動・貸出・返却確認用の掲示板
 * 掲示板投稿の返却完了管理
-* 装置数・状態別件数のサマリー表示
-* 掲示板の投稿数・返却状況のサマリー表示
+* トップページでの装置数サマリー表示
+* 掲示板での投稿数・返却状況・最終更新日時表示
 * SQLiteデータベースのバックアップ
-* `Makefile` による環境確認、セットアップ、配布物作成
+* `make setup` による初期セットアップ
+* `make package` による配布用アーカイブ作成
+
+## スクリーンショット
+
+公開時には、ここにスクリーンショットを追加してください。
+
+例：
+
+```text
+docs/
+├── screenshot_list.png
+├── screenshot_item.png
+└── screenshot_board.png
+```
+
+Markdownで表示する例：
+
+```markdown
+![装置一覧](docs/screenshot_list.png)
+```
 
 ## 動作環境
 
@@ -31,21 +53,22 @@ PHPとSQLiteで動作する、研究室・大学・研究施設向けの軽量�
 * PDO
 * PDO SQLite
 * SQLite 3
-* Apache HTTP ServerなどのPHP対応Webサーバー
+* Apache HTTP Server などのPHP対応Webサーバー
 * GNU Make
 * Unix系OS
 
   * Linux
-  * macOSなど
+  * macOS
+  * BSD系OSなど
 
 JavaScriptフレームワークや外部データベースサーバーは不要です。
 
-## ディレクトリ構成
+## 推奨ディレクトリ構成
 
-代表的な構成は次のとおりです。
+アプリ本体は、Webサーバーから参照できる場所に配置します。
 
 ```text
-equip_log/
+hapilog/
 ├── Makefile
 ├── README.md
 ├── config.example.php
@@ -64,28 +87,37 @@ equip_log/
 └── その他のPHPファイル
 ```
 
-装置データは、Web公開ディレクトリとは別の場所に保存することを推奨します。
+実データは、可能であればWeb公開ディレクトリの外に置くことを推奨します。
 
 ```text
-equip_log_data/
-├── equipment.sqlite
+hapilog_data/
+├── hapilog.sqlite
 ├── photos/
 ├── manuals/
 └── backups/
 ```
 
+このように、アプリ本体と実データを分けておくと、セキュリティと移植性の面で扱いやすくなります。
+
 ## インストール
 
-### 1. ソースコードを配置する
+### 1. HapiLogを配置する
 
-配布アーカイブを展開し、Webサーバーから参照できる場所へ配置します。
+Gitを使う場合：
 
 ```bash
-tar xzf equip_log.tar.gz
-cd equip_log
+git clone https://github.com/YOUR_NAME/hapilog.git
+cd hapilog
 ```
 
-### 2. 設定ファイルを作成する
+配布アーカイブを使う場合：
+
+```bash
+tar xzf hapilog.tar.gz
+cd hapilog
+```
+
+### 2. `config.php` を作成する
 
 設定例をコピーします。
 
@@ -93,7 +125,7 @@ cd equip_log
 make config
 ```
 
-または、直接コピーしても構いません。
+または手動でコピーします。
 
 ```bash
 cp config.example.php config.php
@@ -101,94 +133,127 @@ cp config.example.php config.php
 
 作成された `config.php` を、導入先の環境に合わせて編集します。
 
+例：
+
 ```php
 <?php
 
 return [
-    'system_name' => '○○大学 装置管理システム',
-    'system_short_name' => '装置管理',
+    'system_name' => 'HapiLog',
+    'system_short_name' => 'HapiLog',
     'timezone' => 'Asia/Tokyo',
 
     'database_path' =>
-        '/path/to/equip_log_data/equipment.sqlite',
+        '/path/to/hapilog_data/hapilog.sqlite',
 
     'photo_directory' =>
-        '/path/to/equip_log_data/photos',
+        '/path/to/hapilog_data/photos',
 
     'manual_directory' =>
-        '/path/to/equip_log_data/manuals',
+        '/path/to/hapilog_data/manuals',
 
     'photo_max_size' => 10 * 1024 * 1024,
     'manual_max_size' => 10 * 1024 * 1024,
 ];
 ```
 
-各保存先には、Webサーバーの実行ユーザーが読み書きできる必要があります。
+データ保存先のディレクトリは、Webサーバーの実行ユーザーから読み書きできる必要があります。
 
 ### 3. 環境を確認する
-
-```bash
-make all
-```
-
-`make` だけでも同じ処理を実行します。
 
 ```bash
 make
 ```
 
-この処理では以下を確認します。
+または、
+
+```bash
+make all
+```
+
+このコマンドでは、以下を確認します。
 
 * PHPコマンド
 * PHPバージョン
 * PDO拡張
 * PDO SQLite拡張
 * 必須ファイル
-* `config.php` の設定
+* 設定ファイル
 * PHPファイルの構文
 
 `make` および `make all` は、データベースを変更しません。
 
-### 4. データベースをセットアップする
+### 4. セットアップを実行する
 
 ```bash
 make setup
 ```
 
-この処理では以下を行います。
+この処理では、保存ディレクトリの作成とSQLiteデータベース構造の初期化を行います。
 
-* データ保存ディレクトリの作成
-* 写真保存ディレクトリの作成
-* マニュアル保存ディレクトリの作成
-* SQLiteデータベースの作成
-* 必要なテーブルの作成
-* 必要なインデックスの作成
-* SQLite整合性チェック
+既存のデータベースがある場合は、スキーマ適用前に自動でバックアップを作成します。
 
-既存のデータベースがある場合は、セットアップ前に自動的にバックアップを作成します。
+既存レコードは削除しません。
 
-既存テーブルや既存レコードは削除しません。
+## 基本的な使い方
+
+ブラウザで HapiLog のURLを開きます。
+
+典型的な流れは次のとおりです。
+
+1. **新規登録** から装置を登録する
+2. 管理番号、名称、型番、カテゴリ、メーカー、置き場などを入力する
+3. 必要に応じて写真やPDFマニュアルを登録する
+4. **移動登録** で現在地、使用者、状態を更新する
+5. 一時的な貸出や返却確認には掲示板を使う
+6. 必要に応じてCSVで装置一覧を出力する
+
+## 設定ファイル
+
+施設ごとの設定は `config.php` に書きます。
+
+`config.php` は公開リポジトリに含めないでください。
+代わりに `config.example.php` をテンプレートとして管理します。
+
+主な設定項目：
+
+```php
+'system_name' => 'HapiLog',
+'system_short_name' => 'HapiLog',
+'timezone' => 'Asia/Tokyo',
+'database_path' => '/path/to/hapilog_data/hapilog.sqlite',
+'photo_directory' => '/path/to/hapilog_data/photos',
+'manual_directory' => '/path/to/hapilog_data/manuals',
+'photo_max_size' => 10 * 1024 * 1024,
+'manual_max_size' => 10 * 1024 * 1024,
+```
 
 ## Apache Basic認証
 
-Basic認証を利用する場合は、導入先ごとに `.htaccess` を設定してください。
+研究室内で利用する場合は、Basic認証やIP制限などでアクセス制限することを推奨します。
 
-例：
+`.htaccess` の例：
 
 ```apache
 AuthType Basic
-AuthName "Equipment Log"
-AuthUserFile /absolute/path/to/.equip_log_htpasswd
+AuthName "HapiLog"
+AuthUserFile /absolute/path/to/.hapilog_htpasswd
 Require valid-user
+
+<FilesMatch "^(README\.md|Makefile|schema\.sql|config\.example\.php|setup\.php)$">
+    Require all denied
+</FilesMatch>
 ```
 
 パスワードファイルは、例えば次のように作成します。
 
 ```bash
-htpasswd -c /absolute/path/to/.equip_log_htpasswd admin
+htpasswd -c /absolute/path/to/.hapilog_htpasswd admin
 ```
 
-`.htaccess` の `AuthUserFile` は、PHPの `config.php` からは参照できません。各施設のApache環境に合わせて直接設定してください。
+実際の `.htaccess` にはサーバー固有のパスが含まれるため、公開リポジトリには含めないことを推奨します。
+
+必要であれば `.htaccess.example` を用意してください。
 
 ## Makefileの使い方
 
@@ -230,7 +295,7 @@ make syntax
 make config
 ```
 
-既存の `config.php` は上書きしません。
+既存の `config.php` は上書きされません。
 
 ### 初期セットアップ
 
@@ -238,24 +303,24 @@ make config
 make setup
 ```
 
-既存DBがある場合は、先にバックアップを作成してからスキーマを確認します。
+既存データは削除されません。
 
-### データベースのバックアップ
+### SQLiteデータベースのバックアップ
 
 ```bash
 make backup
 ```
 
-バックアップは、データベースと同じ親ディレクトリにある `backups` ディレクトリへ保存されます。
+バックアップは、SQLiteデータベースと同じ親ディレクトリ内の `backups` に保存されます。
 
 例：
 
 ```text
-equip_log_data/backups/
-└── equipment.sqlite.20260614_123456.bak
+hapilog_data/backups/
+└── hapilog.sqlite.20260614_123456.bak
 ```
 
-このバックアップにはSQLiteデータベースのみが含まれます。写真とPDFマニュアルは含まれません。
+このバックアップには写真やPDFマニュアルの実ファイルは含まれません。
 
 ### 配布用アーカイブの作成
 
@@ -263,22 +328,23 @@ equip_log_data/backups/
 make package
 ```
 
-次のような配布用アーカイブが作成されます。
+`dist/` 以下に配布用アーカイブが作成されます。
+
+例：
 
 ```text
-dist/equip_log.tar.gz
+dist/hapilog.tar.gz
 ```
 
-配布物からは原則として以下が除外されます。
+配布アーカイブには、原則として以下を含めません。
 
 * `config.php`
+* `.htaccess`
 * SQLiteデータベース
-* SQLiteの一時ファイル
-* 写真
+* 写真ファイル
 * PDFマニュアル
-* バックアップ
+* バックアップファイル
 * エディタの一時ファイル
-* 既存の配布アーカイブ
 
 ### 一時ファイルの削除
 
@@ -288,7 +354,7 @@ make clean
 
 ## データベースの安全性
 
-`make setup` で使用する `schema.sql` は、再実行可能な構成になっています。
+HapiLog の `schema.sql` は、再実行しても既存データを削除しない構成を想定しています。
 
 主に以下を使用します。
 
@@ -306,92 +372,100 @@ DELETE
 
 そのため、通常は `make setup` を複数回実行しても、既存の装置情報や履歴は保持されます。
 
-ただし、重要な環境で更新作業を行う場合は、事前にバックアップを確認してください。
+ただし、本番環境を更新する場合は、事前にバックアップを確認してください。
 
 ```bash
 make backup
 ```
 
-## 保存データ
+## 保存されるデータ
 
 ### SQLiteデータベース
 
-以下の情報を保存します。
+SQLiteデータベースには、以下の情報が保存されます。
 
-* 装置基本情報
+* 装置情報
+* 管理番号
+* カテゴリ
+* メーカー
+* 型番
+* シリアル番号
 * 現在地
 * 使用者
 * 状態
+* 備考
 * 移動履歴
 * 写真の登録情報
 * PDFマニュアルの登録情報
 * 掲示板投稿
-* 掲示板の編集日時
-* 掲示板の返却完了日時
+* 返却状態
+* 編集日時
 
 ### 写真
 
-写真ファイルの実体は、`config.php` の `photo_directory` に保存されます。
+写真ファイルの実体は、`photo_directory` で指定したディレクトリに保存されます。
 
-同じ写真を複数装置から参照できます。別の装置からも参照されている写真は、一方の登録を削除しても実ファイルを削除しない設計です。
+同じ写真ファイルを複数の装置から参照できます。
 
 ### PDFマニュアル
 
-PDFファイルの実体は、`config.php` の `manual_directory` に保存されます。
+PDFマニュアルの実体は、`manual_directory` で指定したディレクトリに保存されます。
 
-同じPDFを複数装置から参照できます。別の装置からも参照されているPDFは、一方の登録を削除しても実ファイルを削除しない設計です。
+同じPDFファイルを複数の装置から参照できます。
 
 ## バックアップ
 
-SQLiteデータベースのバックアップは次のコマンドで作成できます。
+SQLiteデータベースのみをバックアップする場合：
 
 ```bash
 make backup
 ```
 
-写真とPDFマニュアルも含めて完全なバックアップを作成する場合は、データ保存ディレクトリ全体を別途バックアップしてください。
+写真やPDFマニュアルも含めて完全にバックアップする場合は、データ保存ディレクトリ全体をバックアップしてください。
 
 例：
 
 ```bash
-tar czf equip_log_data_backup.tar.gz /path/to/equip_log_data
+tar czf hapilog_data_backup.tar.gz /path/to/hapilog_data
 ```
 
-大容量の写真やPDFを扱う場合は、施設のバックアップポリシーに合わせて運用してください。
+実際の運用では、各施設のバックアップ方針に合わせてください。
 
 ## アップロードサイズ
 
-アプリケーション上の上限は `config.php` で設定します。
+アプリケーション側のアップロード上限は `config.php` で設定します。
 
 ```php
 'photo_max_size' => 10 * 1024 * 1024,
 'manual_max_size' => 10 * 1024 * 1024,
 ```
 
-PHP側の設定値も、これ以上である必要があります。
+PHP側にもアップロード制限があります。
 
-代表的な設定項目：
+`php.ini` の設定例：
 
 ```ini
 upload_max_filesize = 128M
 post_max_size = 128M
 memory_limit = 256M
+file_uploads = On
+max_file_uploads = 20
 ```
 
-実際に利用される `php.ini` は、CLI版PHPとWebサーバー版PHPで異なる場合があります。
+CLI版PHPとWebサーバー版PHPでは、参照される `php.ini` が異なる場合があります。
 
-## 権限設定
+## パーミッション
 
-データ保存ディレクトリには、Webサーバーの実行ユーザーが読み書きできる必要があります。
+データ保存ディレクトリは、Webサーバーの実行ユーザーから読み書きできる必要があります。
 
 例：
 
 ```bash
-chown -R www-data:www-data /path/to/equip_log_data
-chmod -R 770 /path/to/equip_log_data
+chown -R www-data:www-data /path/to/hapilog_data
+chmod -R 770 /path/to/hapilog_data
 ```
 
-Webサーバーのユーザー名は環境によって異なります。
+Webサーバーの実行ユーザー名は環境によって異なります。
 
 代表例：
 
@@ -400,163 +474,100 @@ Webサーバーのユーザー名は環境によって異なります。
 * `httpd`
 * `www`
 
-必要以上に広い権限を与えないでください。
+必要以上に広い権限を与えないようにしてください。
 
 ## セキュリティ上の注意
 
-* `equipment.sqlite` はWeb公開ディレクトリの外に置くことを推奨します。
-* 写真とPDFマニュアルも、可能であればWeb公開ディレクトリの外に置いてください。
-* Basic認証などでアクセス制限してください。
-* `config.php` を公開リポジトリへ登録しないでください。
-* 定期的にバックアップしてください。
-* HTTPS環境での利用を推奨します。
-* `.htaccess` が有効かどうかはApache設定に依存します。
-* 本番環境ではPHPのエラー詳細を画面に表示しないことを推奨します。
+* `config.php` を公開リポジトリに含めないでください。
+* サーバー固有の `.htaccess` を公開リポジトリに含めないでください。
+* SQLiteデータベースはWeb公開ディレクトリの外に置くことを推奨します。
+* 写真やPDFマニュアルも、可能であればWeb公開ディレクトリの外に置いてください。
+* Basic認証、IP制限、VPNなどでアクセス制限してください。
+* 本番環境ではHTTPSを利用してください。
+* データベースとアップロードファイルを定期的にバックアップしてください。
+* 本番環境ではPHPの詳細なエラーを画面に表示しないことを推奨します。
+* 多人数で利用する場合は、アップロードされるファイルの扱いに注意してください。
 
-## Gitで管理する場合
+## `.gitignore`
 
-`.gitignore` には、少なくとも次を追加することを推奨します。
+典型的な `.gitignore` は次のようになります。
 
 ```gitignore
+# Local configuration
 config.php
+.htaccess
 
+# SQLite database files
 *.sqlite
+*.sqlite3
+*.db
+*.db3
 *.sqlite-shm
 *.sqlite-wal
+*.sqlite-journal
 
+# Data directories
+hapilog_data/
+equip_log_data/
+log_data/
+data/
+photos/
+manuals/
+backup/
+backups/
+uploads/
+
+# Distribution files
 dist/
+*.tar.gz
+*.tgz
+*.zip
 
+# Editor and backup files
 *~
 #*#
 .#*
+*.bak
+*.backup
+*.backup2
+*.orig
+*.swp
+*.swo
+
+# OS files
 .DS_Store
+Thumbs.db
 ```
-
-データディレクトリがリポジトリ内にある場合は、写真、PDF、バックアップも除外してください。
-
-```gitignore
-photos/
-manuals/
-backups/
-```
-
-## トラブルシューティング
-
-### PDO SQLiteが利用できない
-
-次のようなエラーが表示される場合：
-
-```text
-PDO SQLite extension is not available.
-```
-
-PHPのSQLite拡張をインストールしてください。
-
-Debian・Ubuntu系の例：
-
-```bash
-sudo apt install php-sqlite3
-```
-
-Red Hat・Rocky Linux・AlmaLinux系では、利用しているPHPパッケージ構成を確認してください。
-
-### データディレクトリへ書き込めない
-
-次のようなエラーが表示される場合：
-
-```text
-Directory is not writable
-```
-
-ディレクトリの所有者と権限を確認してください。
-
-```bash
-ls -ld /path/to/equip_log_data
-```
-
-Webサーバーの実行ユーザーから書き込める必要があります。
-
-### SQLiteのロックエラー
-
-SQLiteは同時に多数の書き込みを行う用途には向きません。
-
-本システムではロック待ち時間を設定していますが、同時更新が多い環境では、
-
-```text
-database is locked
-```
-
-が発生する可能性があります。
-
-数人から数十人程度が、主に閲覧し、時々登録・更新する運用を想定しています。
-
-### CSSの変更が反映されない
-
-ブラウザのキャッシュを削除するか、強制再読み込みしてください。
-
-一般的な操作：
-
-* Windows・Linux：`Ctrl + F5`
-* macOS：`Command + Shift + R`
-
-### Makefileで `missing separator` が出る
-
-Makefileのコマンド行は、先頭をスペースではなくタブ文字にする必要があります。
-
-```text
-Makefile: missing separator
-```
-
-と表示された場合は、コマンド行のインデントを確認してください。
 
 ## 想定する利用規模
 
-本システムは、小規模から中規模の研究室・施設内での利用を想定しています。
+HapiLog は、小規模から中規模の研究室・研究施設での利用を想定しています。
 
 例：
 
-* 装置数：数百から数千件程度
-* 利用者：数人から数十人程度
-* 更新頻度：閲覧中心で、時々登録・移動・編集
-* 写真・PDF：装置詳細画面から個別に表示
+* 装置数：数百〜数千件程度
+* 利用者：数人〜数十人程度
+* 利用形態：閲覧中心
+* 更新頻度：時々登録・移動・編集
+* 写真やPDFマニュアルを装置ごとに添付
 
-装置数が200件程度であれば、SQLiteで十分軽量に動作します。
-
-## ライセンス
-
-公開時には、利用するライセンスをこの節へ記載してください。
-
-例：
-
-```text
-This software is released under the MIT License.
-```
-
-MIT Licenseを採用する場合は、別途 `LICENSE` ファイルを追加してください。
+この程度の規模であれば、SQLiteで十分軽量に動作します。
 
 ## 開発方針
 
-このシステムは、以下を重視して開発しています。
+HapiLog は、以下を重視して開発しています。
 
-* 特別なデータベースサーバーを必要としない
-* 古めのPHP環境でも動作する
-* 小規模施設で保守しやすい
-* 装置の所在と履歴が分かりやすい
-* 写真やマニュアルを簡単に参照できる
-* 過剰に複雑なUIや依存関係を導入しない
-* 他施設へ移植しやすい
-* 既存データを安全に保持する
+* シンプルであること
+* 軽量であること
+* 導入しやすいこと
+* 別サーバーへ移植しやすいこと
+* 古めのPHP環境でも動作すること
+* 外部データベースサーバーを必要としないこと
+* 研究室の装置管理に実用的であること
+* 既存データを安全に保持できること
+* 専門外の管理者にも理解しやすいこと
+* 不要な依存関係や複雑なフレームワークを避けること
 
-## 今後の候補
 
-今後追加を検討できる機能として、以下があります。
-
-* CSVインポート
-* 操作ログ
-* 装置の無効化・復元
-* ユーザー権限管理
-* 貸出期限と期限超過表示
-* QRコード付きラベル印刷
-* データベースマイグレーション
-* Web画面からのバックアップ管理
-* 多言語対応
+## 名前について
+研究室の装置管理を、少しでも楽に、気持ちよく行えるようにするためのシステムです。
