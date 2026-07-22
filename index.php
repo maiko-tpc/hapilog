@@ -72,6 +72,50 @@ if (!in_array($sort, $allowed_sorts, true)) {
 }
 
 /*
+ * 一括返却結果
+ */
+$bulk_return = trim($_GET['bulk_return'] ?? '');
+$bulk_requested = isset($_GET['bulk_requested']) ? (int)$_GET['bulk_requested'] : 0;
+$bulk_moved = isset($_GET['bulk_moved']) ? (int)$_GET['bulk_moved'] : 0;
+$bulk_skipped = isset($_GET['bulk_skipped']) ? (int)$_GET['bulk_skipped'] : 0;
+
+/*
+ * 一括処理後に戻るURL。
+ * 一括処理結果のGETパラメータは引き継がない。
+ */
+$return_query = [];
+
+if ($q !== '') {
+    $return_query['q'] = $q;
+}
+
+if ($category !== '') {
+    $return_query['category'] = $category;
+}
+
+if ($status !== '') {
+    $return_query['status'] = $status;
+}
+
+if ($location !== '') {
+    $return_query['location'] = $location;
+}
+
+if ($sort !== 'asset_tag') {
+    $return_query['sort'] = $sort;
+}
+
+if ($off_default) {
+    $return_query['off_default'] = '1';
+}
+
+$return_url = 'index.php';
+
+if (count($return_query) > 0) {
+    $return_url .= '?' . http_build_query($return_query);
+}
+
+/*
  * 各装置の最新移動履歴を取得するためのJOIN。
  * moved_atが同じ履歴でも、idが最大の1件だけを取得する。
  */
@@ -385,6 +429,20 @@ $display_count = count($items);
     <a href="board.php">掲示板</a>
 </div>
 
+<?php if ($bulk_return === 'done'): ?>
+    <div class="box">
+        <strong>一括デフォルト戻し:</strong>
+
+        選択
+        <?php echo h($bulk_requested); ?>
+        件 ／ 移動登録
+        <?php echo h($bulk_moved); ?>
+        件 ／ スキップ
+        <?php echo h($bulk_skipped); ?>
+        件
+    </div>
+<?php endif; ?>
+
 <div class="box">
     <h2>検索</h2>
 
@@ -534,46 +592,106 @@ $display_count = count($items);
             条件に一致する装置はありません。
         </div>
     <?php else: ?>
-        <table>
-            <tr>
-                <th>管理番号</th>
-                <th>型番</th>
-                <th>名称</th>
-                <th>カテゴリ</th>
-                <th>メーカー</th>
-                <th>備品番号</th>
-                <th>デフォルト置き場</th>
-                <th>現在地</th>
-                <th>使用者</th>
-                <th>状態</th>
-                <th>最終更新</th>
-            </tr>
+        <form
+            method="post"
+            action="bulk_return_default.php"
+            onsubmit="return confirm('チェックした装置をデフォルト置き場に戻します。よろしいですか？');"
+        >
+            <input
+                type="hidden"
+                name="redirect_to"
+                value="<?php echo h($return_url); ?>"
+            >
 
-            <?php foreach ($items as $item): ?>
+            <p>
+                <button type="submit">
+                    チェックした装置をデフォルト置き場に戻す
+                </button>
+            </p>
+
+            <table>
                 <tr>
-                    <td>
-                        <a href="item.php?id=<?php echo h($item['id']); ?>">
-                            <?php echo h($item['asset_tag']); ?>
-                        </a>
-                    </td>
-
-                    <td><?php echo h($item['model']); ?></td>
-                    <td><?php echo h($item['name']); ?></td>
-                    <td><?php echo h($item['category']); ?></td>
-                    <td><?php echo h($item['manufacturer']); ?></td>
-                    <td><?php echo h($item['property_number']); ?></td>
-                    <td><?php echo h($item['default_location']); ?></td>
-                    <td><?php echo h($item['location']); ?></td>
-                    <td><?php echo h($item['user_name']); ?></td>
-                    <td><?php echo h($item['status']); ?></td>
-                    <td>
-                        <?php echo h(
-                            format_datetime_minute($item['moved_at'])
-                        ); ?>
-                    </td>
+                    <th>
+                        <input
+                            type="checkbox"
+                            id="select-all-items"
+                            aria-label="すべて選択"
+                        >
+                    </th>
+                    <th>管理番号</th>
+                    <th>型番</th>
+                    <th>名称</th>
+                    <th>カテゴリ</th>
+                    <th>メーカー</th>
+                    <th>備品番号</th>
+                    <th>デフォルト置き場</th>
+                    <th>現在地</th>
+                    <th>使用者</th>
+                    <th>状態</th>
+                    <th>最終更新</th>
                 </tr>
-            <?php endforeach; ?>
-        </table>
+
+                <?php foreach ($items as $item): ?>
+                    <?php
+                    $has_default_location =
+                        trim((string)$item['default_location']) !== '';
+                    ?>
+
+                    <tr>
+                        <td>
+                            <input
+                                type="checkbox"
+                                name="item_ids[]"
+                                value="<?php echo h($item['id']); ?>"
+                                <?php if (!$has_default_location) echo 'disabled'; ?>
+                                <?php if (!$has_default_location) echo 'title="デフォルト置き場が未設定です"'; ?>
+                            >
+                        </td>
+
+                        <td>
+                            <a href="item.php?id=<?php echo h($item['id']); ?>">
+                                <?php echo h($item['asset_tag']); ?>
+                            </a>
+                        </td>
+
+                        <td><?php echo h($item['model']); ?></td>
+                        <td><?php echo h($item['name']); ?></td>
+                        <td><?php echo h($item['category']); ?></td>
+                        <td><?php echo h($item['manufacturer']); ?></td>
+                        <td><?php echo h($item['property_number']); ?></td>
+                        <td><?php echo h($item['default_location']); ?></td>
+                        <td><?php echo h($item['location']); ?></td>
+                        <td><?php echo h($item['user_name']); ?></td>
+                        <td><?php echo h($item['status']); ?></td>
+                        <td>
+                            <?php echo h(
+                                format_datetime_minute($item['moved_at'])
+                            ); ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </table>
+        </form>
+
+        <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var selectAll = document.getElementById('select-all-items');
+
+            if (!selectAll) {
+                return;
+            }
+
+            selectAll.addEventListener('change', function () {
+                var checkboxes = document.querySelectorAll(
+                    'input[name="item_ids[]"]:not(:disabled)'
+                );
+
+                checkboxes.forEach(function (checkbox) {
+                    checkbox.checked = selectAll.checked;
+                });
+            });
+        });
+        </script>
     <?php endif; ?>
 </div>
 
