@@ -1,0 +1,66 @@
+# ============================================================
+# Local configuration
+# ============================================================
+
+config.php
+
+# Site-specific Apache settings
+# AuthUserFile path etc. may contain local/private paths.
+.htaccess
+
+# ============================================================
+# Data files
+# ============================================================
+
+*.sqlite
+*.sqlite3
+*.db
+*.db3
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite-journal
+
+# ============================================================
+# Data directories
+# These are usually outside the repository, but keep them ignored
+# in case they are accidentally created inside the project.
+# ============================================================
+
+equip_log_data/
+log_data/
+data/
+photos/
+manuals/
+backup/
+backups/
+uploads/
+
+# ============================================================
+# Distribution files
+# ============================================================
+
+dist/
+*.tar.gz
+*.tgz
+*.zip
+
+# ============================================================
+# Editor backup files
+# ============================================================
+
+*~
+#*#
+.#*
+*.bak
+*.backup
+*.backup2
+*.orig
+*.swp
+*.swo
+
+# ============================================================
+# OS generated files
+# ============================================================
+
+.DS_Store
+Thumbs.db
