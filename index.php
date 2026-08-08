@@ -72,12 +72,20 @@ if (!in_array($sort, $allowed_sorts, true)) {
 }
 
 /*
- * 一括返却結果
+ * 一括デフォルト戻し結果
  */
 $bulk_return = trim($_GET['bulk_return'] ?? '');
 $bulk_requested = isset($_GET['bulk_requested']) ? (int)$_GET['bulk_requested'] : 0;
 $bulk_moved = isset($_GET['bulk_moved']) ? (int)$_GET['bulk_moved'] : 0;
 $bulk_skipped = isset($_GET['bulk_skipped']) ? (int)$_GET['bulk_skipped'] : 0;
+
+/*
+ * 一括移動登録結果
+ */
+$bulk_move = trim($_GET['bulk_move'] ?? '');
+$bulk_move_requested = isset($_GET['bulk_move_requested']) ? (int)$_GET['bulk_move_requested'] : 0;
+$bulk_move_moved = isset($_GET['bulk_move_moved']) ? (int)$_GET['bulk_move_moved'] : 0;
+$bulk_move_skipped = isset($_GET['bulk_move_skipped']) ? (int)$_GET['bulk_move_skipped'] : 0;
 
 /*
  * 一括処理後に戻るURL。
@@ -482,6 +490,20 @@ $display_count = count($items);
     </div>
 <?php endif; ?>
 
+<?php if ($bulk_move === 'done'): ?>
+    <div class="box">
+        <strong>一括移動登録:</strong>
+
+        選択
+        <?php echo h($bulk_move_requested); ?>
+        件 ／ 移動登録
+        <?php echo h($bulk_move_moved); ?>
+        件 ／ スキップ
+        <?php echo h($bulk_move_skipped); ?>
+        件
+    </div>
+<?php endif; ?>
+
 <div class="box">
     <h2>検索</h2>
 
@@ -633,8 +655,7 @@ $display_count = count($items);
     <?php else: ?>
         <form
             method="post"
-            action="bulk_return_default.php"
-            onsubmit="return confirm('チェックした装置をデフォルト置き場に戻します。よろしいですか？');"
+            action="bulk_move.php"
         >
             <input
                 type="hidden"
@@ -643,7 +664,18 @@ $display_count = count($items);
             >
 
             <p>
-                <button type="submit">
+                <button
+                    type="submit"
+                    formaction="bulk_move.php"
+                >
+                    チェックした装置を同じ内容で移動登録
+                </button>
+
+                <button
+                    type="submit"
+                    formaction="bulk_return_default.php"
+                    onclick="return confirm('チェックした装置をデフォルト置き場に戻します。よろしいですか？');"
+                >
                     チェックした装置をデフォルト置き場に戻す
                 </button>
             </p>
@@ -670,19 +702,12 @@ $display_count = count($items);
                 </tr>
 
                 <?php foreach ($items as $item): ?>
-                    <?php
-                    $has_default_location =
-                        trim((string)$item['default_location']) !== '';
-                    ?>
-
                     <tr>
                         <td>
                             <input
                                 type="checkbox"
                                 name="item_ids[]"
                                 value="<?php echo h($item['id']); ?>"
-                                <?php if (!$has_default_location) echo 'disabled'; ?>
-                                <?php if (!$has_default_location) echo 'title="デフォルト置き場が未設定です"'; ?>
                             >
                         </td>
 
@@ -720,7 +745,7 @@ $display_count = count($items);
 
             selectAll.addEventListener('change', function () {
                 var checkboxes = document.querySelectorAll(
-                    'input[name="item_ids[]"]:not(:disabled)'
+                    'input[name="item_ids[]"]'
                 );
 
                 checkboxes.forEach(function (checkbox) {
