@@ -755,13 +755,7 @@ $display_count = count($items);
 
             <table>
                 <tr>
-                    <th>
-                        <input
-                            type="checkbox"
-                            id="select-all-items"
-                            aria-label="すべて選択"
-                        >
-                    </th>
+                    <th></th>
                     <th>管理番号</th>
                     <th>型番</th>
                     <th>名称</th>
@@ -807,26 +801,6 @@ $display_count = count($items);
                 <?php endforeach; ?>
             </table>
         </form>
-
-        <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            var selectAll = document.getElementById('select-all-items');
-
-            if (!selectAll) {
-                return;
-            }
-
-            selectAll.addEventListener('change', function () {
-                var checkboxes = document.querySelectorAll(
-                    'input[name="item_ids[]"]'
-                );
-
-                checkboxes.forEach(function (checkbox) {
-                    checkbox.checked = selectAll.checked;
-                });
-            });
-        });
-        </script>
     <?php endif; ?>
 </div>
 
