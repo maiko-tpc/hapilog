@@ -52,6 +52,31 @@ function find_latest_datetime(array $values) {
 }
 
 /*
+ * 備品番号を表内で見やすく表示する。
+ *
+ * カンマ区切りで複数登録されている場合は、
+ * 1件ずつ改行して表示する。
+ */
+function format_property_number_for_table($s) {
+    $s = trim((string)$s);
+
+    if ($s === '') {
+        return '';
+    }
+
+    $parts = preg_split('/\s*,\s*/', $s);
+    $parts = array_filter($parts, function ($part) {
+        return trim((string)$part) !== '';
+    });
+
+    if (count($parts) === 0) {
+        return $s;
+    }
+
+    return implode("\n", $parts);
+}
+
+/*
  * 検索・絞り込み条件
  */
 $q = trim($_GET['q'] ?? '');
@@ -136,6 +161,41 @@ $latest_join = "
             ORDER BY m2.moved_at DESC, m2.id DESC
             LIMIT 1
         )
+";
+
+/*
+ * 装置情報としての更新日時。
+ *
+ * updated_at が空でなければ updated_at、
+ * 空なら created_at を使う。
+ */
+$item_updated_expr = "
+    CASE
+        WHEN TRIM(COALESCE(items.updated_at, '')) <> ''
+        THEN items.updated_at
+        ELSE items.created_at
+    END
+";
+
+/*
+ * 一覧上の最終更新日時。
+ *
+ * 装置情報の更新日時と最新移動履歴日時を比較して、
+ * より新しい方を使う。
+ */
+$row_updated_expr = "
+    CASE
+        WHEN TRIM(COALESCE(latest.moved_at, '')) = ''
+        THEN {$item_updated_expr}
+
+        WHEN TRIM(COALESCE({$item_updated_expr}, '')) = ''
+        THEN latest.moved_at
+
+        WHEN latest.moved_at >= {$item_updated_expr}
+        THEN latest.moved_at
+
+        ELSE {$item_updated_expr}
+    END
 ";
 
 /*
@@ -388,20 +448,31 @@ if (count($where) > 0) {
 
 /*
  * 表示順
+ *
+ * updated_desc / updated_asc では、
+ * 最新移動履歴だけでなく、装置情報の更新日時も考慮する。
  */
 switch ($sort) {
     case 'updated_desc':
         $order_sql = "
-            CASE WHEN latest.moved_at IS NULL THEN 1 ELSE 0 END ASC,
-            latest.moved_at DESC,
+            CASE
+                WHEN TRIM(COALESCE(row_updated_at, '')) = ''
+                THEN 1
+                ELSE 0
+            END ASC,
+            row_updated_at DESC,
             items.asset_tag ASC
         ";
         break;
 
     case 'updated_asc':
         $order_sql = "
-            CASE WHEN latest.moved_at IS NULL THEN 1 ELSE 0 END ASC,
-            latest.moved_at ASC,
+            CASE
+                WHEN TRIM(COALESCE(row_updated_at, '')) = ''
+                THEN 1
+                ELSE 0
+            END ASC,
+            row_updated_at ASC,
             items.asset_tag ASC
         ";
         break;
@@ -422,7 +493,9 @@ $list_sql = "
         latest.user_name,
         latest.status,
         latest.memo AS latest_memo,
-        latest.moved_at
+        latest.moved_at,
+        {$item_updated_expr} AS item_updated_at,
+        {$row_updated_expr} AS row_updated_at
     FROM items
     {$latest_join}
     {$where_sql}
@@ -721,13 +794,13 @@ $display_count = count($items);
                         <td><?php echo h($item['name']); ?></td>
                         <td><?php echo h($item['category']); ?></td>
                         <td><?php echo h($item['manufacturer']); ?></td>
-                        <td><?php echo h($item['property_number']); ?></td>
+                        <td><?php echo nl2br(h(format_property_number_for_table($item['property_number']))); ?></td>
                         <td><?php echo h($item['default_location']); ?></td>
                         <td><?php echo h($item['location']); ?></td>
                         <td><?php echo h($item['user_name']); ?></td>
                         <td>
                             <?php echo h(
-                                format_datetime_minute($item['moved_at'])
+                                format_datetime_minute($item['row_updated_at'])
                             ); ?>
                         </td>
                     </tr>
