@@ -165,6 +165,10 @@ tr:hover td {
     white-space: nowrap;
 }
 
+.nowrap {
+    white-space: nowrap;
+}
+
 
 /* =========================
    フォーム

@@ -19,7 +19,7 @@ function format_datetime_minute($s) {
         return $s;
     }
 
-    return date('Y-m-d H:i', $timestamp);
+    return date('Y/m/d H:i', $timestamp);
 }
 
 /*
@@ -792,7 +792,7 @@ $display_count = count($items);
                         <td><?php echo h($item['default_location']); ?></td>
                         <td><?php echo h($item['location']); ?></td>
                         <td><?php echo h($item['user_name']); ?></td>
-                        <td>
+                        <td class="nowrap">
                             <?php echo h(
                                 format_datetime_minute($item['row_updated_at'])
                             ); ?>
